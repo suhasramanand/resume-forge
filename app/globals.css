@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .animate-in {
+    animation: fadeIn 0.2s ease-in-out;
+  }
+  
+  .slide-in-from-bottom-5 {
+    animation: slideInFromBottom 0.2s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@layer base {
+  :root {
+    /* Notion/Nothing inspired color palette */
+    --background: 0 0% 100%; /* Pure white */
+    --foreground: 0 0% 0%; /* Pure black */
+    --border: 0 0% 90%; /* Light grey */
+    --input: 0 0% 96%; /* Off-white */
+    --ring: 0 0% 0%;
+    --primary: 0 0% 0%; /* Black */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 0 0% 97%; /* Off-white */
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 95%; /* Light grey/beige */
+    --muted-foreground: 0 0% 45%; /* Medium grey */
+    --accent: 0 0% 96%; /* Off-white */
+    --accent-foreground: 0 0% 0%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply text-foreground;
+    /* Subtle grid pattern - Notion style */
+    background-color: #fafafa !important; /* Off-white background */
+    background-image: 
+      linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px) !important;
+    background-size: 20px 20px !important;
+    background-position: 0 0, 0 0 !important;
+  }
+  
+  html {
+    background-color: #fafafa !important;
+    background-image: 
+      linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px) !important;
+    background-size: 20px 20px !important;
+  }
+}
