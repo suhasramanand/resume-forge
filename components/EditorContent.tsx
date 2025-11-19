@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { FormattedLine } from '@/lib/resumeFormatter';
 import {
   DndContext,
@@ -34,6 +34,8 @@ interface EditorContentProps {
   onLineDragEnd: (event: DragEndEvent) => void;
   onSectionDragEnd: (event: DragEndEvent) => void;
   onExport: () => void;
+  editorScrollRef?: React.RefObject<HTMLDivElement>;
+  previewScrollRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function EditorContent({
@@ -53,7 +55,13 @@ export function EditorContent({
   onLineDragEnd,
   onSectionDragEnd,
   onExport,
+  editorScrollRef,
+  previewScrollRef,
 }: EditorContentProps) {
+  const internalScrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = editorScrollRef || internalScrollRef;
+  const isScrollingRef = useRef(false);
+
   // Memoize ordered sections and filtered lines
   const orderedSections = useMemo(
     () => sectionOrder.length > 0 ? sectionOrder : Object.keys(sections),
@@ -65,22 +73,56 @@ export function EditorContent({
     [orderedSections, lines]
   );
 
+  // Sync scroll with preview
+  useEffect(() => {
+    const editorElement = scrollRef.current;
+    const previewElement = previewScrollRef?.current;
+
+    if (!editorElement || !previewElement) return;
+
+    const handleScroll = () => {
+      if (isScrollingRef.current) return;
+      
+      isScrollingRef.current = true;
+      
+      const editorScrollTop = editorElement.scrollTop;
+      const editorScrollHeight = editorElement.scrollHeight - editorElement.clientHeight;
+      const editorScrollPercent = editorScrollHeight > 0 ? editorScrollTop / editorScrollHeight : 0;
+      
+      const previewScrollHeight = previewElement.scrollHeight - previewElement.clientHeight;
+      const targetPreviewScroll = previewScrollHeight * editorScrollPercent;
+      
+      previewElement.scrollTop = targetPreviewScroll;
+      
+      requestAnimationFrame(() => {
+        isScrollingRef.current = false;
+      });
+    };
+
+    editorElement.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      editorElement.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrollRef, previewScrollRef]);
+
   return (
-    <div className="flex-1 flex flex-col bg-background overflow-hidden min-w-0 border border-border rounded-lg shadow-sm h-[calc(100vh-2rem)]">
-      <div className="sticky top-0 z-10 px-6 py-4 border-b border-border bg-background flex items-center justify-between flex-shrink-0 rounded-t-lg shadow-sm">
+    <div className="flex-1 flex flex-col bg-background overflow-hidden min-w-0 border border-border rounded-xl shadow-sm h-[calc(100vh-2rem)]">
+      <div className="sticky top-0 z-10 px-6 sm:px-8 py-4 sm:py-5 border-b border-border/80 bg-background/95 backdrop-blur-sm flex items-center justify-between flex-shrink-0 rounded-t-xl shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-foreground m-0 tracking-tight">Resume Editor</h1>
-          <p className="text-xs text-muted-foreground mt-1">Click any field to edit • Drag to reorder</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground m-0 tracking-tight">Resume Editor</h1>
+          <p className="text-xs text-muted-foreground mt-1.5">Click any field to edit • Drag to reorder</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
-            className="flex items-center gap-1.5 px-4 py-2 bg-foreground text-background rounded-md text-sm font-medium hover:bg-foreground/90 transition-colors focus:outline-none focus:ring-2 focus:ring-foreground/20 shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm font-medium hover:bg-foreground/90 hover:shadow-md active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:ring-offset-2 shadow-sm"
             onClick={onExport}
-            title="Export to PDF (Ctrl+P)"
+            title="Export to PDF (Ctrl+P or Cmd+P)"
             aria-label="Export resume to PDF"
           >
             <Download size={16} />
-            Export PDF
+            <span className="hidden sm:inline">Export PDF</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
@@ -109,15 +151,15 @@ export function EditorContent({
           items={sortableItems}
           strategy={verticalListSortingStrategy}
         >
-          <div className="flex-1 overflow-y-auto px-6 py-6 pb-32">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 pb-32">
             {orderedSections.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <FileText size={24} className="text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center h-full text-center py-16 px-4">
+                <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-6 border border-border/50">
+                  <FileText size={32} className="text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">No sections available</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  Upload a resume file to get started. The editor will automatically parse and organize your content.
+                <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+                  Upload a resume file to get started. The editor will automatically parse and organize your content into editable sections.
                 </p>
               </div>
             ) : (

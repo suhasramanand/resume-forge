@@ -134,18 +134,18 @@ export function BlockContainer({
   };
 
   return (
-    <div key={blockIdx} className="border border-border rounded-lg mb-4 bg-background overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 bg-muted border-b border-border">
+    <div key={blockIdx} className="border border-border/80 rounded-xl mb-4 bg-background overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div className="flex items-center gap-2.5 px-4 py-2.5 bg-muted/50 border-b border-border/80">
         <div className="flex items-center cursor-grab active:cursor-grabbing text-muted-foreground p-1 pointer-events-none">
           <GripVertical size={16} />
         </div>
-        <span className="flex-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        <span className="flex-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           {blockTitle} {firstField ? `: ${firstField}` : ''}
         </span>
         {showConfirmDelete ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
-              className="p-1.5 border border-green-300 rounded bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="p-1.5 border border-green-300 rounded-lg bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-green-200 active:scale-95"
               onClick={handleConfirmDelete}
               title="Confirm delete"
               aria-label="Confirm delete"
@@ -153,7 +153,7 @@ export function BlockContainer({
               <Check size={14} className="text-green-700" />
             </button>
             <button
-              className="p-1.5 border border-border rounded bg-background hover:bg-secondary hover:border-foreground/20 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              className="p-1.5 border border-border rounded-lg bg-background hover:bg-secondary hover:border-foreground/20 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
               onClick={handleCancelDelete}
               title="Cancel delete"
               aria-label="Cancel delete"
@@ -163,7 +163,7 @@ export function BlockContainer({
           </div>
         ) : (
           <button
-            className="p-1.5 border border-border rounded bg-background hover:bg-red-50 hover:border-red-300 transition-all opacity-60 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+            className="p-1.5 border border-border rounded-lg bg-background hover:bg-red-50 hover:border-red-300 transition-all duration-150 opacity-60 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-200 active:scale-95"
             onClick={handleDeleteClick}
             title={`Delete entire ${blockTitle.toLowerCase()} block`}
             aria-label={`Delete ${blockTitle.toLowerCase()}`}
@@ -172,7 +172,7 @@ export function BlockContainer({
           </button>
         )}
       </div>
-      <div className="p-2">
+      <div className="p-3">
         {renderBlockContent()}
       </div>
     </div>

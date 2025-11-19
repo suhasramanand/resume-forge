@@ -51,10 +51,10 @@ const SortableSectionItem = React.memo(function SortableSectionItem({ section, o
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 p-3 bg-background border border-border rounded-lg hover:bg-secondary transition-colors"
+      className="flex items-center gap-3 p-3.5 bg-background border border-border rounded-xl hover:bg-secondary/80 transition-all duration-150 active:scale-[0.98]"
     >
       <div 
-        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors" 
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition-colors" 
         {...attributes} 
         {...listeners}
         title="Drag to reorder"
@@ -65,7 +65,7 @@ const SortableSectionItem = React.memo(function SortableSectionItem({ section, o
       <span className="flex items-center text-muted-foreground">{section.icon}</span>
       <span className="flex-1 text-sm font-medium text-foreground">{section.name}</span>
       <button 
-        className="p-1.5 border border-border rounded bg-background hover:bg-secondary hover:border-foreground/20 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20" 
+        className="p-1.5 border border-border rounded-lg bg-background hover:bg-secondary hover:border-foreground/20 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95" 
         onClick={onEdit} 
         title="Edit section name"
         aria-label="Edit section"
@@ -73,7 +73,7 @@ const SortableSectionItem = React.memo(function SortableSectionItem({ section, o
         <Edit size={14} />
       </button>
       <button 
-        className="p-1.5 border border-border rounded bg-background hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-red-200" 
+        className="p-1.5 border border-border rounded-lg bg-background hover:bg-red-50 hover:border-red-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-200 active:scale-95" 
         onClick={onDelete} 
         title="Delete section"
         aria-label="Delete section"
@@ -121,19 +121,19 @@ export function SectionMenu({ sections, onReorder, onSectionClick }: SectionMenu
   return (
     <>
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-80 bg-background border border-border rounded-lg shadow-2xl z-50 max-h-[calc(100vh-8rem)] flex flex-col animate-in slide-in-from-bottom-5">
-          <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
+        <div className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-2xl z-50 max-h-[calc(100vh-8rem)] flex flex-col animate-in slide-in-from-bottom-5">
+          <div className="p-4 sm:p-5 border-b border-border/80 flex items-center justify-between bg-muted/30 rounded-t-xl">
             <div>
-              <h3 className="text-sm font-semibold text-foreground m-0">Edit Resume Layout</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Drag sections to reorder</p>
+              <h3 className="text-sm sm:text-base font-semibold text-foreground m-0">Edit Resume Layout</h3>
+              <p className="text-xs text-muted-foreground mt-1">Drag sections to reorder</p>
             </div>
             <button
-              className="p-1.5 hover:bg-secondary rounded transition-colors focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              className="p-1.5 hover:bg-secondary rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
               onClick={() => setIsOpen(false)}
               title="Close (Esc)"
               aria-label="Close menu"
             >
-              <X size={16} />
+              <X size={16} className="text-muted-foreground" />
             </button>
           </div>
           <DndContext
@@ -159,7 +159,7 @@ export function SectionMenu({ sections, onReorder, onSectionClick }: SectionMenu
           </DndContext>
           <div className="p-3 border-t border-border bg-muted/30">
             <button 
-              className="w-full px-4 py-2 bg-background border-2 border-dashed border-border rounded-md text-sm font-medium text-foreground hover:bg-secondary hover:border-foreground/30 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              className="w-full px-4 py-2.5 bg-background border-2 border-dashed border-border rounded-lg text-sm font-medium text-foreground hover:bg-secondary hover:border-foreground/30 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-[0.98]"
               title="Add a new section to your resume"
             >
               + Add New Section
@@ -169,9 +169,9 @@ export function SectionMenu({ sections, onReorder, onSectionClick }: SectionMenu
       )}
       
       <button
-        className="fixed bottom-6 right-6 w-14 h-14 bg-foreground text-background rounded-full shadow-xl flex items-center justify-center hover:bg-foreground/90 hover:shadow-2xl transition-all focus:outline-none focus:ring-4 focus:ring-foreground/20 z-40"
+        className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 w-14 h-14 bg-foreground text-background rounded-2xl shadow-xl flex items-center justify-center hover:bg-foreground/90 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-foreground/20 focus:ring-offset-2 z-40"
         onClick={() => setIsOpen(!isOpen)}
-        title="Edit Resume Layout (Ctrl+M)"
+        title="Edit Resume Layout"
         aria-label="Toggle section menu"
       >
         {isOpen ? <X size={22} /> : <Menu size={22} />}

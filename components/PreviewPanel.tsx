@@ -1,14 +1,52 @@
 'use client';
 
-import React, { forwardRef, useMemo } from 'react';
+import React, { forwardRef, useMemo, useEffect, useRef } from 'react';
 import { FormattedLine } from '@/lib/resumeFormatter';
 import { LinkRenderer } from './LinkRenderer';
 
 interface PreviewPanelProps {
   lines: FormattedLine[];
+  editorScrollRef?: React.RefObject<HTMLDivElement>;
+  previewScrollRef?: React.RefObject<HTMLDivElement>;
 }
 
-export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({ lines }, ref) => {
+export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({ lines, editorScrollRef, previewScrollRef: externalPreviewScrollRef }, ref) => {
+  const internalPreviewScrollRef = useRef<HTMLDivElement>(null);
+  const previewScrollRef = externalPreviewScrollRef || internalPreviewScrollRef;
+  const isScrollingRef = useRef(false);
+
+  // Sync scroll with editor
+  useEffect(() => {
+    const previewElement = previewScrollRef.current;
+    const editorElement = editorScrollRef?.current;
+
+    if (!previewElement || !editorElement) return;
+
+    const handleScroll = () => {
+      if (isScrollingRef.current) return;
+      
+      isScrollingRef.current = true;
+      
+      const previewScrollTop = previewElement.scrollTop;
+      const previewScrollHeight = previewElement.scrollHeight - previewElement.clientHeight;
+      const previewScrollPercent = previewScrollHeight > 0 ? previewScrollTop / previewScrollHeight : 0;
+      
+      const editorScrollHeight = editorElement.scrollHeight - editorElement.clientHeight;
+      const targetEditorScroll = editorScrollHeight * previewScrollPercent;
+      
+      editorElement.scrollTop = targetEditorScroll;
+      
+      requestAnimationFrame(() => {
+        isScrollingRef.current = false;
+      });
+    };
+
+    previewElement.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      previewElement.removeEventListener('scroll', handleScroll);
+    };
+  }, [editorScrollRef]);
   // Memoize the expensive rendering logic
   const renderedContent = useMemo(() => {
           const filteredLines = lines.filter(l => l.type !== 'separator');
@@ -284,16 +322,27 @@ export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({ lin
         }, [lines]);
 
   return (
-    <div className="flex flex-col bg-background overflow-hidden min-w-[300px] max-w-[800px] flex-shrink-0 border border-border rounded-lg shadow-sm h-[calc(100vh-2rem)]" style={{ width: '50%' }}>
-      <div className="sticky top-0 z-10 px-6 py-4 border-b border-border bg-background flex-shrink-0 rounded-t-lg shadow-sm">
-        <div className="flex items-center justify-between">
+    <div className="flex flex-col bg-background overflow-hidden min-w-[300px] max-w-[800px] flex-shrink-0 border border-border rounded-xl shadow-sm h-[calc(100vh-2rem)]" style={{ width: '50%' }}>
+      <div className="sticky top-0 z-10 px-6 sm:px-8 py-4 sm:py-5 border-b border-border/80 bg-background/95 backdrop-blur-sm flex-shrink-0 rounded-t-xl shadow-sm">
+        <div className="flex items-center justify-between w-full">
           <div>
-            <h3 className="text-sm font-semibold text-foreground m-0">Live Preview</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Real-time resume preview</p>
+            <h3 className="text-sm sm:text-base font-semibold text-foreground m-0">Live Preview</h3>
+            <p className="text-xs text-muted-foreground mt-1">Real-time resume preview</p>
           </div>
         </div>
       </div>
-      <div ref={ref} className="flex-1 overflow-y-auto px-6 py-6 bg-background font-sans print-content">
+      <div ref={(node) => {
+        // Handle the forwardRef
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+        // Set the preview scroll ref
+        if (previewScrollRef) {
+          previewScrollRef.current = node;
+        }
+      }} className="flex-1 overflow-y-auto px-6 py-6 bg-background font-sans print-content">
         {renderedContent}
       </div>
     </div>

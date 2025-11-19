@@ -133,8 +133,68 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
 
   // SKILLS (TECHNICAL SKILLS)
   if (parsed.skills && parsed.skills.length > 0) {
-    addLine('section', 'TECHNICAL SKILLS', { section: 'skills' });
-    const categorizedSkills = categorizeSkills(parsed.skills);
+    // First, expand any skills that contain category headers (like "Programming: Java, JavaScript, AI & LLMs: PyTorch")
+    const expandedSkills: string[] = [];
+    parsed.skills.forEach(skill => {
+      // Check if skill contains category headers
+      const categoryPattern = /(?:^|,\s*)(Programming|Cloud\s*&\s*DevOps|AI\s*&\s*LLMs|Data\s*&\s*Integration|Frontend|Backend|Languages|Frameworks|Tools|Technologies|Databases|Infrastructure|DevOps|Cloud):\s*/gi;
+      const categoryMatches = [...skill.matchAll(categoryPattern)];
+      
+      if (categoryMatches.length > 0) {
+        // Split by category headers
+        let lastIndex = 0;
+        categoryMatches.forEach((match, idx) => {
+          if (match.index !== undefined) {
+            const startPos = match.index + match[0].length;
+            const endPos = idx < categoryMatches.length - 1 && categoryMatches[idx + 1].index !== undefined
+              ? categoryMatches[idx + 1].index!
+              : skill.length;
+            const categorySkills = skill.substring(startPos, endPos).trim();
+            
+            // Split the category skills by comma
+            const skillList = categorySkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            skillList.forEach(s => {
+              if (s.length > 0 && !s.match(/^(Programming|Cloud\s*&\s*DevOps|AI\s*&\s*LLMs|Data\s*&\s*Integration|Frontend|Backend|Languages|Frameworks|Tools|Technologies|Databases|Infrastructure|DevOps|Cloud):$/i)) {
+                expandedSkills.push(s);
+              }
+            });
+          }
+        });
+        
+        // Also get skills before the first category (if any)
+        if (categoryMatches.length > 0 && categoryMatches[0].index !== undefined) {
+          const beforeFirst = skill.substring(0, categoryMatches[0].index).trim();
+          if (beforeFirst.length > 0) {
+            const beforeSkills = beforeFirst.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            beforeSkills.forEach(s => {
+              if (s.length > 0) {
+                expandedSkills.push(s);
+              }
+            });
+          }
+        }
+      } else {
+        // No category headers, just add the skill as-is
+        expandedSkills.push(skill);
+      }
+    });
+    
+    // Filter out "Certifications & Activities" and similar patterns from skills
+    const filteredSkills = expandedSkills.filter(skill => {
+      const lowerSkill = skill.toLowerCase();
+      return !lowerSkill.match(/^(certifications?|certificates?|activities?|certifications?\s*[&|]\s*activities?)$/i) &&
+             !lowerSkill.includes('certifications') && 
+             !lowerSkill.includes('certificates') &&
+             !(lowerSkill.includes('certification') && lowerSkill.includes('activity')) &&
+             !lowerSkill.includes('teaching assistant') &&
+             !lowerSkill.includes('led academic') &&
+             !lowerSkill.includes('open-source contributor') &&
+             !lowerSkill.match(/^(programming|cloud\s*&\s*devops|ai\s*&\s*llms|data\s*&\s*integration|frontend|backend|languages|frameworks|tools|technologies|databases|infrastructure|devops|cloud):$/i);
+    });
+    
+    if (filteredSkills.length > 0) {
+      addLine('section', 'TECHNICAL SKILLS', { section: 'skills' });
+      const categorizedSkills = categorizeSkills(filteredSkills);
     
     // Reorganize into the requested format
     const skillGroups: Record<string, string[]> = {
@@ -145,83 +205,175 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
       'Frontend': [],
     };
     
-    // Map categorized skills to new groups
+    // Use a Set to track which skills have already been categorized to avoid duplicates
+    const categorizedSkillSet = new Set<string>();
+    
+    // Helper function to categorize a skill into the appropriate group
+    const categorizeSkill = (skill: string): string | null => {
+      const lowerSkill = skill.toLowerCase();
+      
+      // Skip if already categorized
+      if (categorizedSkillSet.has(lowerSkill)) {
+        return null;
+      }
+      
+      // AI & LLMs - check first (most specific)
+      if (lowerSkill.includes('ai') || lowerSkill.includes('llm') || lowerSkill.includes('langchain') || lowerSkill.includes('pytorch') || lowerSkill.includes('prompt') || lowerSkill.includes('rag') || lowerSkill.includes('agent')) {
+        return 'AI & LLMs';
+      }
+      // Data & Integration - check second
+      else if (lowerSkill.includes('postgres') || lowerSkill.includes('mongo') || lowerSkill.includes('kafka') || lowerSkill.includes('fastapi') || (lowerSkill.includes('rest') && lowerSkill.includes('api')) || lowerSkill.includes('data modeling')) {
+        return 'Data & Integration';
+      }
+      // Frontend - check third
+      else if (lowerSkill.includes('react') || lowerSkill.includes('next') || lowerSkill.includes('tailwind') || lowerSkill.includes('frontend') || lowerSkill.includes('ui engineering') || lowerSkill.includes('web security')) {
+        return 'Frontend';
+      }
+      // Cloud & DevOps - check fourth
+      else if (lowerSkill.includes('aws') || lowerSkill.includes('gcp') || lowerSkill.includes('azure') || lowerSkill.includes('docker') || lowerSkill.includes('kubernetes') || lowerSkill.includes('terraform') || lowerSkill.includes('ci/cd') || lowerSkill.includes('iam')) {
+        return 'Cloud & DevOps';
+      }
+      // Programming - default for languages only
+      else if (lowerSkill.includes('python') || lowerSkill.includes('java') || lowerSkill.includes('javascript') || lowerSkill.includes('typescript') || lowerSkill.includes('c++') || lowerSkill.includes('sql')) {
+        return 'Programming';
+      }
+      
+      return null;
+    };
+    
+    // Process all skills first to categorize them properly
+    const allSkills = filteredSkills || [];
+    allSkills.forEach(skill => {
+      const category = categorizeSkill(skill);
+      if (category) {
+        const lowerSkill = skill.toLowerCase();
+        if (!skillGroups[category].includes(skill)) {
+          skillGroups[category].push(skill);
+          categorizedSkillSet.add(lowerSkill);
+        }
+      }
+    });
+    
+    // Now handle categorizedSkills - only add if not already categorized
     if (categorizedSkills['Languages']) {
       categorizedSkills['Languages'].forEach(skill => {
-        const lowerSkill = skill.toLowerCase();
-        if (lowerSkill.includes('sql')) {
-          skillGroups['Programming'].push(skill);
-        } else {
-          skillGroups['Programming'].push(skill);
+        const category = categorizeSkill(skill);
+        if (category) {
+          const lowerSkill = skill.toLowerCase();
+          if (!skillGroups[category].includes(skill)) {
+            skillGroups[category].push(skill);
+            categorizedSkillSet.add(lowerSkill);
+          }
         }
       });
     }
     if (categorizedSkills['Cloud']) {
-      skillGroups['Cloud & DevOps'].push(...categorizedSkills['Cloud']);
+      categorizedSkills['Cloud'].forEach(skill => {
+        const category = categorizeSkill(skill) || 'Cloud & DevOps';
+        const lowerSkill = skill.toLowerCase();
+        if (!categorizedSkillSet.has(lowerSkill)) {
+          skillGroups[category].push(skill);
+          categorizedSkillSet.add(lowerSkill);
+        }
+      });
     }
     if (categorizedSkills['DevOps']) {
-      skillGroups['Cloud & DevOps'].push(...categorizedSkills['DevOps']);
+      categorizedSkills['DevOps'].forEach(skill => {
+        const category = categorizeSkill(skill) || 'Cloud & DevOps';
+        const lowerSkill = skill.toLowerCase();
+        if (!categorizedSkillSet.has(lowerSkill)) {
+          skillGroups[category].push(skill);
+          categorizedSkillSet.add(lowerSkill);
+        }
+      });
     }
     if (categorizedSkills['Infrastructure']) {
-      skillGroups['Cloud & DevOps'].push(...categorizedSkills['Infrastructure']);
+      categorizedSkills['Infrastructure'].forEach(skill => {
+        const category = categorizeSkill(skill) || 'Cloud & DevOps';
+        const lowerSkill = skill.toLowerCase();
+        if (!categorizedSkillSet.has(lowerSkill)) {
+          skillGroups[category].push(skill);
+          categorizedSkillSet.add(lowerSkill);
+        }
+      });
     }
     if (categorizedSkills['Databases']) {
-      // Only add non-SQL databases to Data & Integration, SQL goes to Programming
       categorizedSkills['Databases'].forEach(skill => {
-        const lowerSkill = skill.toLowerCase();
-        if (lowerSkill.includes('sql') && !lowerSkill.includes('postgres') && !lowerSkill.includes('mysql')) {
-          if (!skillGroups['Programming'].includes(skill)) {
-            skillGroups['Programming'].push(skill);
+        const category = categorizeSkill(skill);
+        if (category) {
+          const lowerSkill = skill.toLowerCase();
+          if (!skillGroups[category].includes(skill)) {
+            skillGroups[category].push(skill);
+            categorizedSkillSet.add(lowerSkill);
           }
         } else {
-          skillGroups['Data & Integration'].push(skill);
+          // Default: non-SQL databases to Data & Integration, SQL to Programming
+          const lowerSkill = skill.toLowerCase();
+          if (!categorizedSkillSet.has(lowerSkill)) {
+            if (lowerSkill.includes('sql') && !lowerSkill.includes('postgres') && !lowerSkill.includes('mysql')) {
+              skillGroups['Programming'].push(skill);
+            } else {
+              skillGroups['Data & Integration'].push(skill);
+            }
+            categorizedSkillSet.add(lowerSkill);
+          }
         }
       });
     }
     if (categorizedSkills['Frameworks']) {
-      skillGroups['Frontend'].push(...categorizedSkills['Frameworks']);
+      categorizedSkills['Frameworks'].forEach(skill => {
+        const category = categorizeSkill(skill) || 'Frontend';
+        const lowerSkill = skill.toLowerCase();
+        if (!categorizedSkillSet.has(lowerSkill)) {
+          skillGroups[category].push(skill);
+          categorizedSkillSet.add(lowerSkill);
+        }
+      });
     }
-    // Also check all skills for AI/LLM, Data, Frontend patterns
-    const allSkills = parsed.skills || [];
-    allSkills.forEach(skill => {
-      const lowerSkill = skill.toLowerCase();
-      // AI & LLMs
-      if ((lowerSkill.includes('ai') || lowerSkill.includes('llm') || lowerSkill.includes('langchain') || lowerSkill.includes('pytorch') || lowerSkill.includes('prompt') || lowerSkill.includes('rag') || lowerSkill.includes('agent')) && !skillGroups['AI & LLMs'].includes(skill)) {
-        skillGroups['AI & LLMs'].push(skill);
-      }
-      // Data & Integration
-      else if ((lowerSkill.includes('postgres') || lowerSkill.includes('mongo') || lowerSkill.includes('kafka') || lowerSkill.includes('fastapi') || (lowerSkill.includes('rest') && lowerSkill.includes('api')) || lowerSkill.includes('data modeling')) && !skillGroups['Data & Integration'].includes(skill)) {
-        skillGroups['Data & Integration'].push(skill);
-      }
-      // Frontend
-      else if ((lowerSkill.includes('react') || lowerSkill.includes('next') || lowerSkill.includes('tailwind') || lowerSkill.includes('frontend') || lowerSkill.includes('ui engineering') || lowerSkill.includes('web security')) && !skillGroups['Frontend'].includes(skill)) {
-        skillGroups['Frontend'].push(skill);
-      }
-    });
     
     if (categorizedSkills['Other']) {
-      // Distribute other skills appropriately
+      // Distribute other skills appropriately - check in order of specificity
       categorizedSkills['Other'].forEach(skill => {
         const lowerSkill = skill.toLowerCase();
+        
+        // Skip if already categorized
+        if (categorizedSkillSet.has(lowerSkill)) {
+          return;
+        }
+        
+        // AI & LLMs - most specific first
         if (lowerSkill.includes('ai') || lowerSkill.includes('llm') || lowerSkill.includes('langchain') || lowerSkill.includes('pytorch') || lowerSkill.includes('prompt') || lowerSkill.includes('rag') || lowerSkill.includes('agent')) {
           if (!skillGroups['AI & LLMs'].includes(skill)) {
             skillGroups['AI & LLMs'].push(skill);
+            categorizedSkillSet.add(lowerSkill);
           }
-        } else if (lowerSkill.includes('postgres') || lowerSkill.includes('mongo') || lowerSkill.includes('kafka') || lowerSkill.includes('fastapi') || (lowerSkill.includes('rest') && lowerSkill.includes('api')) || lowerSkill.includes('data modeling')) {
+        }
+        // Data & Integration
+        else if (lowerSkill.includes('postgres') || lowerSkill.includes('mongo') || lowerSkill.includes('kafka') || lowerSkill.includes('fastapi') || (lowerSkill.includes('rest') && lowerSkill.includes('api')) || lowerSkill.includes('data modeling')) {
           if (!skillGroups['Data & Integration'].includes(skill)) {
             skillGroups['Data & Integration'].push(skill);
+            categorizedSkillSet.add(lowerSkill);
           }
-        } else if (lowerSkill.includes('react') || lowerSkill.includes('next') || lowerSkill.includes('tailwind') || lowerSkill.includes('frontend') || lowerSkill.includes('ui engineering') || lowerSkill.includes('web security')) {
+        }
+        // Frontend
+        else if (lowerSkill.includes('react') || lowerSkill.includes('next') || lowerSkill.includes('tailwind') || lowerSkill.includes('frontend') || lowerSkill.includes('ui engineering') || lowerSkill.includes('web security')) {
           if (!skillGroups['Frontend'].includes(skill)) {
             skillGroups['Frontend'].push(skill);
+            categorizedSkillSet.add(lowerSkill);
           }
-        } else if (lowerSkill.includes('python') || lowerSkill.includes('java') || lowerSkill.includes('javascript') || lowerSkill.includes('typescript') || lowerSkill.includes('c++')) {
-          if (!skillGroups['Programming'].includes(skill)) {
-            skillGroups['Programming'].push(skill);
-          }
-        } else if (lowerSkill.includes('aws') || lowerSkill.includes('gcp') || lowerSkill.includes('azure') || lowerSkill.includes('docker') || lowerSkill.includes('kubernetes') || lowerSkill.includes('terraform') || lowerSkill.includes('ci/cd') || lowerSkill.includes('iam')) {
+        }
+        // Cloud & DevOps
+        else if (lowerSkill.includes('aws') || lowerSkill.includes('gcp') || lowerSkill.includes('azure') || lowerSkill.includes('docker') || lowerSkill.includes('kubernetes') || lowerSkill.includes('terraform') || lowerSkill.includes('ci/cd') || lowerSkill.includes('iam')) {
           if (!skillGroups['Cloud & DevOps'].includes(skill)) {
             skillGroups['Cloud & DevOps'].push(skill);
+            categorizedSkillSet.add(lowerSkill);
+          }
+        }
+        // Programming - default for languages
+        else if (lowerSkill.includes('python') || lowerSkill.includes('java') || lowerSkill.includes('javascript') || lowerSkill.includes('typescript') || lowerSkill.includes('c++') || lowerSkill.includes('sql')) {
+          if (!skillGroups['Programming'].includes(skill)) {
+            skillGroups['Programming'].push(skill);
+            categorizedSkillSet.add(lowerSkill);
           }
         }
       });
@@ -255,8 +407,8 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
         }
       }
     });
-    
-    addSeparator();
+      addSeparator();
+    }
   }
 
   // EXPERIENCE (WORK EXPERIENCE) - before projects to match example
@@ -369,12 +521,13 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
     addSeparator();
   }
 
-  // CERTIFICATIONS
+  // CERTIFICATIONS & ACTIVITIES
   if (parsed.certifications && parsed.certifications.length > 0) {
-    addLine('section', 'CERTIFICATIONS', { section: 'certifications' });
+    addLine('section', 'CERTIFICATIONS & ACTIVITIES', { section: 'certifications' });
     parsed.certifications.slice(0, 5).forEach(cert => {
-      addLine('content', `• ${cert}`, { section: 'certifications' });
+      addLine('content', cert, { section: 'certifications' });
     });
+    addSeparator();
   }
 
   // Compress if needed

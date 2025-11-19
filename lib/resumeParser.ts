@@ -148,7 +148,7 @@ function extractResumeData(text: string): ParsedResume {
     } else if (lowerLine.match(/^(education|academic background)$/i)) {
       currentSection = 'education';
       continue;
-    } else if (lowerLine.match(/^(certifications?|certificates?)$/i)) {
+    } else if (lowerLine.match(/^(certifications?|certificates?|activities?|certifications?\s*[&|]\s*activities?)$/i)) {
       currentSection = 'certifications';
       continue;
     }
@@ -163,13 +163,91 @@ function extractResumeData(text: string): ParsedResume {
         break;
 
       case 'skills':
+        // Skip lines that are section headers or contain "Certifications & Activities"
+        if (lowerLine.match(/^(certifications?|certificates?|activities?|certifications?\s*[&|]\s*activities?)$/i)) {
+          // This is actually a section header, switch to certifications section
+          currentSection = 'certifications';
+          continue;
+        }
         if (line.match(/^[•\-\*]/) || line.includes(',')) {
-          const skills = line.replace(/^[•\-\*\d.]+\s*/, '').split(/[,|]/).map(s => s.trim());
-          if (!resume.skills) resume.skills = [];
-          resume.skills.push(...skills.filter(s => s.length > 0));
+          let skillsText = line.replace(/^[•\-\*\d.]+\s*/, '');
+          
+          // Check if the line contains category headers (like "AI & LLMs:", "Data & Integration:", "Frontend:")
+          // If so, split by these category headers first
+          const categoryPattern = /(?:^|,\s*)(Programming|Cloud\s*&\s*DevOps|AI\s*&\s*LLMs|Data\s*&\s*Integration|Frontend|Backend|Languages|Frameworks|Tools|Technologies|Databases|Infrastructure|DevOps|Cloud):\s*/gi;
+          const categoryMatches = [...skillsText.matchAll(categoryPattern)];
+          
+          if (categoryMatches.length > 1) {
+            // Split by category headers
+            const parts: string[] = [];
+            let lastIndex = 0;
+            
+            categoryMatches.forEach((match, idx) => {
+              if (match.index !== undefined) {
+                // Add the category name and its skills
+                const categoryName = match[1];
+                const startPos = match.index + match[0].length;
+                const endPos = idx < categoryMatches.length - 1 && categoryMatches[idx + 1].index !== undefined
+                  ? categoryMatches[idx + 1].index!
+                  : skillsText.length;
+                const categorySkills = skillsText.substring(startPos, endPos).trim();
+                
+                // Split the category skills by comma
+                const skillList = categorySkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                skillList.forEach(skill => {
+                  if (skill.length > 0) {
+                    parts.push(skill);
+                  }
+                });
+              }
+            });
+            
+            // Also get skills before the first category (if any)
+            if (categoryMatches.length > 0 && categoryMatches[0].index !== undefined) {
+              const beforeFirst = skillsText.substring(0, categoryMatches[0].index).trim();
+              if (beforeFirst.length > 0) {
+                const beforeSkills = beforeFirst.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                parts.push(...beforeSkills);
+              }
+            }
+            
+            if (!resume.skills) resume.skills = [];
+            // Filter out "Certifications & Activities" and similar patterns
+            const filteredSkills = parts.filter(s => {
+              const lowerS = s.toLowerCase();
+              return s.length > 0 && 
+                     !lowerS.match(/^(certifications?|certificates?|activities?)$/i) &&
+                     !lowerS.includes('certifications') && 
+                     !lowerS.includes('certificates') &&
+                     !(lowerS.includes('certification') && lowerS.includes('activity')) &&
+                     !lowerS.match(/^(programming|cloud\s*&\s*devops|ai\s*&\s*llms|data\s*&\s*integration|frontend|backend|languages|frameworks|tools|technologies|databases|infrastructure|devops|cloud):$/i);
+            });
+            resume.skills.push(...filteredSkills);
+          } else {
+            // Normal comma-separated skills
+            const skills = skillsText.split(/[,|]/).map(s => s.trim());
+            if (!resume.skills) resume.skills = [];
+            // Filter out "Certifications & Activities" and similar patterns
+            const filteredSkills = skills.filter(s => {
+              const lowerS = s.toLowerCase();
+              return s.length > 0 && 
+                     !lowerS.match(/^(certifications?|certificates?|activities?)$/i) &&
+                     !lowerS.includes('certifications') && 
+                     !lowerS.includes('certificates') &&
+                     !(lowerS.includes('certification') && lowerS.includes('activity'));
+            });
+            resume.skills.push(...filteredSkills);
+          }
         } else if (line.length > 0 && line.length < 100) {
-          if (!resume.skills) resume.skills = [];
-          resume.skills.push(line);
+          // Filter out "Certifications & Activities" and similar patterns
+          const lowerS = line.toLowerCase();
+          if (!lowerS.match(/^(certifications?|certificates?|activities?|certifications?\s*[&|]\s*activities?)$/i) &&
+              !lowerS.includes('certifications') && 
+              !lowerS.includes('certificates') &&
+              !(lowerS.includes('certification') && lowerS.includes('activity'))) {
+            if (!resume.skills) resume.skills = [];
+            resume.skills.push(line);
+          }
         }
         break;
 
@@ -250,7 +328,27 @@ function extractResumeData(text: string): ParsedResume {
             }
           }
           
-          // Extract dates from role if attached (e.g., "Project TraineeJan 2023" or "Intern, CloudJun 2025")
+          // Extract dates from role if attached (e.g., "Project TraineeJan 2023" or "Intern, CloudJun 2025" or "EngineerOct")
+          // First, try to extract dates that are attached directly to words (no space)
+          const attachedDatePattern = /([A-Za-z]+?)((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\d{4}?)/i;
+          const roleAttachedDateMatch = role.match(attachedDatePattern);
+          if (roleAttachedDateMatch && !dates) {
+            const [, wordBeforeDate, datePart] = roleAttachedDateMatch;
+            // Check if the date part is valid (has year or is a month name)
+            if (datePart.match(/\d{4}/) || datePart.length >= 3) {
+              // Extract full date if possible
+              const fullDateMatch = role.match(new RegExp(`(${wordBeforeDate})((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\\s*\\d{4})`, 'i'));
+              if (fullDateMatch) {
+                dates = fullDateMatch[2].trim();
+                role = fullDateMatch[1].trim();
+              } else {
+                // Just remove the month abbreviation
+                role = role.replace(new RegExp(`(${wordBeforeDate})((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*)`, 'i'), '$1');
+              }
+            }
+          }
+          
+          // Extract dates from role if attached with space (e.g., "Project TraineeJan 2023" or "Intern, CloudJun 2025")
           if (!dates) {
             const roleDateMatch = role.match(/(.+?)((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*(?:[-–—]\s*(?:Present|Current|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})?)/i);
             if (roleDateMatch) {
@@ -259,45 +357,58 @@ function extractResumeData(text: string): ParsedResume {
             }
           }
           
-          // Clean up role - remove any remaining date patterns
-          role = role.replace(datePattern, '').replace(datePattern2, '').trim().replace(/\s*,\s*$/, '');
-          // Clean up company - remove any remaining date patterns
-          company = company.replace(datePattern, '').replace(datePattern2, '').trim();
-          
           // Determine which is company and which is role
           // Usually: Company | Role | Dates
           // But sometimes: Role | Company | Dates
           // Check if part1 looks like a company name (capitalized, no common role words)
           const roleKeywords = /(intern|engineer|developer|trainee|manager|analyst|consultant|specialist|lead|senior|junior|associate)/i;
+          let finalRole = role;
+          let finalCompany = company;
+          
           if (roleKeywords.test(part1) && !roleKeywords.test(part2)) {
             // part1 is role, part2 is company
-            role = part1.trim().replace(datePattern, '').replace(datePattern2, '').trim().replace(/\s*,\s*$/, '');
-            company = part2.trim().replace(datePattern, '').replace(datePattern2, '').trim();
+            finalRole = part1.trim();
+            finalCompany = part2.trim();
           } else {
             // part1 is company, part2 is role
-            company = part1.trim().replace(datePattern, '').replace(datePattern2, '').trim();
-            role = part2.trim().replace(datePattern, '').replace(datePattern2, '').trim().replace(/\s*,\s*$/, '');
+            finalCompany = part1.trim();
+            finalRole = part2.trim();
           }
           
           // Remove duplicate company names
-          if (company === role || (part1 === part2 && part1)) {
+          if (finalCompany === finalRole || (part1 === part2 && part1)) {
             // If company and role are the same, or part1 equals part2, likely duplicate
             // Try to extract role from the end
-            const roleMatch = role.match(/(.+?)\s+(Software Engineer|Project Trainee|Intern|Developer|Engineer|Manager|Analyst|Consultant|Specialist|Lead|Senior|Junior|Associate|Trainee)/i);
+            const roleMatch = finalRole.match(/(.+?)\s+(Software Engineer|Project Trainee|Intern|Developer|Engineer|Manager|Analyst|Consultant|Specialist|Lead|Senior|Junior|Associate|Trainee)/i);
             if (roleMatch) {
-              company = roleMatch[1].trim();
-              role = roleMatch[2].trim();
+              finalCompany = roleMatch[1].trim();
+              finalRole = roleMatch[2].trim();
             } else if (part1 === part2) {
               // If both parts are identical, use first as company, second as role (if it has role keywords)
-              company = part1.trim();
-              role = part3?.trim() || '';
+              finalCompany = part1.trim();
+              finalRole = part3?.trim() || '';
             }
           }
+          
+          // Now clean up the final role and company - remove date patterns, trailing dashes, and attached month abbreviations
+          finalRole = finalRole.replace(datePattern, '').replace(datePattern2, '').trim();
+          finalRole = finalRole.replace(/\s*[-–—]\s*$/, '').replace(/\s*,\s*$/, '').trim();
+          // Remove month abbreviations that might be attached (e.g., "CloudJun" -> "Cloud", "EngineerOct" -> "Engineer")
+          finalRole = finalRole.replace(/([A-Za-z]+?)((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*)$/i, '$1').trim();
+          
+          finalCompany = finalCompany.replace(datePattern, '').replace(datePattern2, '').trim();
+          finalCompany = finalCompany.replace(/\s*[-–—]\s*$/, '').replace(/\s*,\s*$/, '').trim();
+          
+          role = finalRole;
+          company = finalCompany;
+          
+          // Clean up dates - remove trailing dashes
+          const cleanedDates = dates ? dates.replace(/\s*[-–—]\s*$/, '').trim() : '';
           
           currentExperience = {
             role: role,
             company: company,
-            dates: dates,
+            dates: cleanedDates,
             bullets: [],
           };
         } else if (expAtMatch) {
@@ -309,11 +420,18 @@ function extractResumeData(text: string): ParsedResume {
             company: expAtMatch[2].trim(),
             bullets: [],
           };
-        } else if (currentExperience && line.match(/^[•\-\*]/)) {
-          currentExperience.bullets.push(line.replace(/^[•\-\*\d.]+\s*/, ''));
-        } else if (currentExperience && !line.match(/^[A-Z]/) && line.length > 10) {
-          // Sometimes bullets don't have bullet points
-          currentExperience.bullets.push(line.trim());
+        } else if (currentExperience) {
+          // Check if this line is a date range (e.g., "Jun 2025 - Aug 2025")
+          const dateRangeMatch = line.match(/^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\s*[-–—]\s*(?:Present|Current|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})$/i);
+          if (dateRangeMatch && !currentExperience.dates) {
+            // This line is a date range, add it to dates
+            currentExperience.dates = dateRangeMatch[1].trim();
+          } else if (line.match(/^[•\-\*]/)) {
+            currentExperience.bullets.push(line.replace(/^[•\-\*\d.]+\s*/, ''));
+          } else if (!line.match(/^[A-Z]/) && line.length > 10) {
+            // Sometimes bullets don't have bullet points
+            currentExperience.bullets.push(line.trim());
+          }
         }
         break;
 

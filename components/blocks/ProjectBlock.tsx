@@ -175,7 +175,7 @@ export function ProjectBlock({
           </div>
         )}
         <button
-          className="w-full mt-2 flex items-center justify-center gap-1.5 px-3 py-2 text-xs border border-border rounded-md bg-background hover:bg-secondary hover:border-foreground/20 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20 text-muted-foreground hover:text-foreground"
+          className="w-full mt-2 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium border border-border rounded-lg bg-background hover:bg-secondary hover:border-foreground/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20 text-muted-foreground hover:text-foreground active:scale-[0.98]"
           onClick={handleAddBullet}
           title="Add bullet point"
         >

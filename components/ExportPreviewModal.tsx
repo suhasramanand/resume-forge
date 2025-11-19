@@ -15,23 +15,23 @@ export function ExportPreviewModal({ isOpen, onClose, onExport, lines }: ExportP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-foreground/50 z-50 flex items-center justify-center p-8" onClick={onClose}>
-      <div className="bg-background rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0 bg-muted/30">
+    <div className="fixed inset-0 bg-foreground/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-8" onClick={onClose}>
+      <div className="bg-background rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 sm:p-6 border-b border-border/80 flex-shrink-0 bg-muted/30">
           <div>
-            <h2 className="text-lg font-semibold text-foreground m-0">Export Preview</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Review your resume before printing</p>
+            <h2 className="text-lg sm:text-xl font-semibold text-foreground m-0">Export Preview</h2>
+            <p className="text-xs text-muted-foreground mt-1.5">Review your resume before printing</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
-              className="px-4 py-2 bg-muted hover:bg-secondary rounded-md text-sm font-medium text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              className="px-4 py-2 bg-muted hover:bg-secondary rounded-lg text-sm font-medium text-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
               onClick={onClose}
               title="Cancel (Esc)"
             >
               Cancel
             </button>
             <button
-              className="px-4 py-2 bg-foreground hover:bg-foreground/90 text-background rounded-md text-sm font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              className="px-4 py-2 bg-foreground hover:bg-foreground/90 text-background rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:ring-offset-2 active:scale-95"
               onClick={onExport}
               title="Print or save as PDF"
             >

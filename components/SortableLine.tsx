@@ -60,8 +60,8 @@ export const SortableLine = React.memo(function SortableLine({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 p-2 rounded transition-colors hover:bg-muted/30 ${
-        isDragging ? 'opacity-50' : ''
+      className={`flex items-center gap-2 p-2.5 rounded-lg transition-all duration-150 hover:bg-muted/40 ${
+        isDragging ? 'opacity-50 scale-95' : ''
       }`}
     >
       {editingId === line.id ? (
@@ -185,7 +185,7 @@ export const SortableLine = React.memo(function SortableLine({
             if (shouldShowDragHandle) {
               return (
                 <div 
-                  className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors p-1 rounded hover:bg-muted"
+                  className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors p-1.5 rounded-lg hover:bg-muted"
                   {...attributes} 
                   {...listeners}
                   title="Drag to reorder"
@@ -203,7 +203,7 @@ export const SortableLine = React.memo(function SortableLine({
             }
           })()}
           <div 
-            className="flex-1 cursor-text rounded px-2 py-1 hover:bg-muted/30 transition-colors" 
+            className="flex-1 cursor-text rounded-lg px-2.5 py-1.5 hover:bg-muted/30 transition-colors" 
             onClick={onStartEdit}
             role="button"
             tabIndex={0}
@@ -247,7 +247,7 @@ export const SortableLine = React.memo(function SortableLine({
           </div>
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
-              className="p-1.5 border border-border rounded bg-background hover:bg-secondary hover:border-foreground/20 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              className="p-1.5 border border-border rounded-lg bg-background hover:bg-secondary hover:border-foreground/20 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
               onClick={onAddLine}
               title="Add below (or press Enter to add)"
               aria-label="Add line below"
@@ -255,7 +255,7 @@ export const SortableLine = React.memo(function SortableLine({
               <Plus size={14} />
             </button>
             <button
-              className="p-1.5 border border-border rounded bg-background hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-red-200"
+              className="p-1.5 border border-border rounded-lg bg-background hover:bg-red-50 hover:border-red-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-200 active:scale-95"
               onClick={onRemoveLine}
               title="Delete (or press Delete key)"
               aria-label="Delete line"

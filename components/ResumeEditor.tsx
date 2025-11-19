@@ -38,6 +38,8 @@ interface ResumeEditorProps {
 
 export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
   const previewContentRef = useRef<HTMLDivElement>(null);
+  const editorScrollRef = useRef<HTMLDivElement>(null);
+  const previewScrollRef = useRef<HTMLDivElement>(null);
   
   const {
     editingId,
@@ -126,7 +128,7 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
   }, [setSidebarOpen, showExportPreview, setShowExportPreview]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden relative p-4 gap-4">
+    <div className="flex h-screen w-full overflow-hidden relative p-3 sm:p-4 gap-3 sm:gap-4">
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -137,12 +139,12 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
 
       {!sidebarOpen && (
         <button 
-          className="fixed left-6 top-6 z-20 p-2.5 bg-background border border-border rounded-lg shadow-lg hover:bg-secondary hover:shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20"
+          className="fixed left-4 top-4 z-30 p-3 bg-background/95 backdrop-blur-sm border border-border/80 rounded-xl shadow-lg hover:bg-secondary hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:ring-offset-2"
           onClick={() => setSidebarOpen(true)}
-          title="Open Sidebar (Ctrl+B)"
+          title="Open Sidebar (Ctrl+B or Cmd+B)"
           aria-label="Open sidebar"
         >
-          <Menu size={20} />
+          <Menu size={20} className="text-foreground" />
         </button>
       )}
 
@@ -163,6 +165,8 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
         onLineDragEnd={handleLineDragEnd}
         onSectionDragEnd={handleSectionDragEnd}
         onExport={handleExportClick}
+        editorScrollRef={editorScrollRef}
+        previewScrollRef={previewScrollRef}
       />
 
       <div 
@@ -174,7 +178,7 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
         <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 h-12 bg-foreground/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"></div>
       </div>
 
-      <PreviewPanel ref={previewContentRef} lines={lines} />
+      <PreviewPanel ref={previewContentRef} lines={lines} editorScrollRef={editorScrollRef} previewScrollRef={previewScrollRef} />
 
       <SectionMenu
         sections={sectionMenuItems}
