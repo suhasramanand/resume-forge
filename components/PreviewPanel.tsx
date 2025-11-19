@@ -8,9 +8,18 @@ interface PreviewPanelProps {
   lines: FormattedLine[];
   editorScrollRef?: React.RefObject<HTMLDivElement>;
   previewScrollRef?: React.RefObject<HTMLDivElement>;
+  visibleSections?: Set<string>;
+  settings?: {
+    fontSize?: number;
+    lineSpacing?: number;
+    marginTop?: number;
+    marginBottom?: number;
+    marginLeft?: number;
+    marginRight?: number;
+  };
 }
 
-export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({ lines, editorScrollRef, previewScrollRef: externalPreviewScrollRef }, ref) => {
+export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({ lines, editorScrollRef, previewScrollRef: externalPreviewScrollRef, visibleSections, settings }, ref) => {
   const internalPreviewScrollRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = externalPreviewScrollRef || internalPreviewScrollRef;
   const isScrollingRef = useRef(false);
@@ -49,7 +58,26 @@ export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({ lin
   }, [editorScrollRef]);
   // Memoize the expensive rendering logic
   const renderedContent = useMemo(() => {
-          const filteredLines = lines.filter(l => l.type !== 'separator');
+          // Filter by visible sections if provided
+          let filteredLines = lines.filter(l => l.type !== 'separator');
+          if (visibleSections && visibleSections.size > 0) {
+            filteredLines = filteredLines.filter(line => {
+              if (line.type === 'section') {
+                const sectionKey = line.content?.toLowerCase().replace(/\s+/g, '') || '';
+                return Array.from(visibleSections).some(key => 
+                  key.toLowerCase().replace(/\s+/g, '') === sectionKey ||
+                  line.content?.toLowerCase().includes(key.toLowerCase())
+                );
+              }
+              // For content lines, check their section metadata
+              const lineSection = line.metadata?.section;
+              if (lineSection) {
+                return visibleSections.has(lineSection);
+              }
+              // If no section metadata, include it (likely header/contact info)
+              return true;
+            });
+          }
           const result: React.ReactNode[] = [];
           let i = 0;
           
@@ -319,10 +347,10 @@ export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({ lin
           }
           
           return result;
-        }, [lines]);
+        }, [lines, visibleSections]);
 
   return (
-    <div className="flex flex-col bg-background overflow-hidden min-w-[300px] max-w-[800px] flex-shrink-0 border border-border rounded-xl shadow-sm h-[calc(100vh-2rem)]" style={{ width: '50%' }}>
+    <div className="flex flex-col bg-background overflow-hidden min-w-[300px] max-w-[800px] flex-shrink-0 border border-border rounded-xl shadow-sm h-full" style={{ width: '50%' }}>
       <div className="sticky top-0 z-10 px-6 sm:px-8 py-4 sm:py-5 border-b border-border/80 bg-background/95 backdrop-blur-sm flex-shrink-0 rounded-t-xl shadow-sm">
         <div className="flex items-center justify-between w-full">
           <div>
@@ -342,7 +370,14 @@ export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({ lin
         if (previewScrollRef) {
           previewScrollRef.current = node;
         }
-      }} className="flex-1 overflow-y-auto px-6 py-6 bg-background font-sans print-content">
+      }} className="flex-1 overflow-y-auto px-6 py-6 bg-background font-sans print-content" style={{
+        fontSize: settings?.fontSize ? `${settings.fontSize}pt` : undefined,
+        lineHeight: settings?.lineSpacing ? settings.lineSpacing : undefined,
+        paddingTop: settings?.marginTop ? `${settings.marginTop * 16}px` : undefined,
+        paddingBottom: settings?.marginBottom ? `${settings.marginBottom * 16}px` : undefined,
+        paddingLeft: settings?.marginLeft ? `${settings.marginLeft * 16}px` : undefined,
+        paddingRight: settings?.marginRight ? `${settings.marginRight * 16}px` : undefined,
+      }}>
         {renderedContent}
       </div>
     </div>

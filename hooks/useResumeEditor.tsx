@@ -9,6 +9,7 @@ import { useResumeEditorLines } from './useResumeEditorLines';
 import { useResumeEditorDrag } from './useResumeEditorDrag';
 import { useResumeEditorExport } from './useResumeEditorExport';
 import { useResumeEditorResize } from './useResumeEditorResize';
+import { useUndoRedo } from './useUndoRedo';
 
 export function useResumeEditor(
   lines: FormattedLine[], 
@@ -25,10 +26,19 @@ export function useResumeEditor(
     state.setSectionOrder
   );
 
+  // Undo/Redo
+  const { addToHistory, undo, redo, canUndo, canRedo, historyLength, currentIndex } = useUndoRedo(
+    lines,
+    onUpdate
+  );
+
   // Edit operations
   const { startEdit, saveEdit, cancelEdit } = useResumeEditorEdit(
     lines,
-    onUpdate,
+    (updatedLines) => {
+      onUpdate(updatedLines);
+      addToHistory(updatedLines);
+    },
     state.editingId,
     state.editValue,
     state.setEditingId,
@@ -36,12 +46,21 @@ export function useResumeEditor(
   );
 
   // Line operations
-  const { addLine, removeLine } = useResumeEditorLines(lines, onUpdate);
+  const { addLine, removeLine } = useResumeEditorLines(
+    lines,
+    (updatedLines) => {
+      onUpdate(updatedLines);
+      addToHistory(updatedLines);
+    }
+  );
 
   // Drag and drop
   const { handleLineDragEnd, handleSectionReorder, handleSectionDragEnd } = useResumeEditorDrag(
     lines,
-    onUpdate,
+    (updatedLines) => {
+      onUpdate(updatedLines);
+      addToHistory(updatedLines);
+    },
     sections,
     state.sectionOrder,
     state.setSectionOrder
@@ -103,5 +122,12 @@ export function useResumeEditor(
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
+    // Undo/Redo
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyLength,
+    currentIndex,
   };
 }

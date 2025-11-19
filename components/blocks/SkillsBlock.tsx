@@ -82,11 +82,12 @@ export function SkillsBlock({
                     onMoveDown={() => {}}
                     isFirst={true}
                     isLast={false}
+                    hideActions={true}
                   />
                 </div>
               )}
               <button
-                className="opacity-0 group-hover:opacity-100 p-1.5 border border-border rounded bg-background hover:bg-secondary hover:border-foreground/20 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                className="opacity-0 group-hover:opacity-100 p-1.5 border border-border rounded-lg bg-background hover:bg-secondary hover:border-foreground/20 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
                 onClick={() => {
                   const lastSkill = skillLines[skillLines.length - 1];
                   if (lastSkill) {
@@ -101,9 +102,9 @@ export function SkillsBlock({
                 <Plus size={14} />
               </button>
               {confirmDeleteCategory === categoryLine?.id ? (
-                <div className="flex items-center gap-1 opacity-100">
+                <div className="flex items-center gap-1.5 opacity-100">
                   <button
-                    className="p-1.5 border border-green-300 rounded bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all focus:outline-none focus:ring-2 focus:ring-green-200"
+                    className="p-1.5 border border-green-300 rounded-lg bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-green-200 active:scale-95"
                     onClick={() => {
                       if (categoryLine) handleConfirmDeleteCategory(categoryLine.id);
                     }}
@@ -113,7 +114,7 @@ export function SkillsBlock({
                     <Check size={14} className="text-green-700" />
                   </button>
                   <button
-                    className="p-1.5 border border-border rounded bg-background hover:bg-secondary hover:border-foreground/20 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                    className="p-1.5 border border-border rounded-lg bg-background hover:bg-secondary hover:border-foreground/20 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
                     onClick={handleCancelDeleteCategory}
                     title="Cancel delete"
                     aria-label="Cancel delete"
@@ -123,7 +124,7 @@ export function SkillsBlock({
                 </div>
               ) : (
                 <button
-                  className="opacity-0 group-hover:opacity-100 p-1.5 border border-border rounded bg-background hover:bg-red-50 hover:border-red-300 transition-all focus:outline-none focus:ring-2 focus:ring-red-200"
+                  className="opacity-0 group-hover:opacity-100 p-1.5 border border-border rounded-lg bg-background hover:bg-red-50 hover:border-red-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-200 active:scale-95"
                   onClick={() => {
                     if (categoryLine) handleDeleteCategory(categoryLine.id);
                   }}

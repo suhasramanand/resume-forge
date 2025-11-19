@@ -9,9 +9,18 @@ interface ExportPreviewModalProps {
   onClose: () => void;
   onExport: () => void;
   lines: FormattedLine[];
+  visibleSections?: Set<string>;
+  settings?: {
+    fontSize?: number;
+    lineSpacing?: number;
+    marginTop?: number;
+    marginBottom?: number;
+    marginLeft?: number;
+    marginRight?: number;
+  };
 }
 
-export function ExportPreviewModal({ isOpen, onClose, onExport, lines }: ExportPreviewModalProps) {
+export function ExportPreviewModal({ isOpen, onClose, onExport, lines, visibleSections, settings }: ExportPreviewModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -41,13 +50,34 @@ export function ExportPreviewModal({ isOpen, onClose, onExport, lines }: ExportP
         </div>
         <div className="flex-1 overflow-y-auto p-8 bg-white" style={{ 
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-          fontSize: '9pt',
-          lineHeight: '1.2',
+          fontSize: settings?.fontSize ? `${settings.fontSize}pt` : '9pt',
+          lineHeight: settings?.lineSpacing ? settings.lineSpacing : '1.2',
           color: '#000',
-          background: '#fff'
+          background: '#fff',
+          paddingTop: settings?.marginTop ? `${settings.marginTop * 16}px` : undefined,
+          paddingBottom: settings?.marginBottom ? `${settings.marginBottom * 16}px` : undefined,
+          paddingLeft: settings?.marginLeft ? `${settings.marginLeft * 16}px` : undefined,
+          paddingRight: settings?.marginRight ? `${settings.marginRight * 16}px` : undefined,
         }}>
           {useMemo(() => {
-            const filteredLines = lines.filter(l => l.type !== 'separator');
+            // Filter by visible sections if provided
+            let filteredLines = lines.filter(l => l.type !== 'separator');
+            if (visibleSections && visibleSections.size > 0) {
+              filteredLines = filteredLines.filter(line => {
+                if (line.type === 'section') {
+                  const sectionKey = line.content?.toLowerCase().replace(/\s+/g, '') || '';
+                  return Array.from(visibleSections).some(key => 
+                    key.toLowerCase().replace(/\s+/g, '') === sectionKey ||
+                    line.content?.toLowerCase().includes(key.toLowerCase())
+                  );
+                }
+                const lineSection = line.metadata?.section;
+                if (lineSection) {
+                  return visibleSections.has(lineSection);
+                }
+                return true;
+              });
+            }
             const result: React.ReactNode[] = [];
             let i = 0;
             
@@ -324,7 +354,7 @@ export function ExportPreviewModal({ isOpen, onClose, onExport, lines }: ExportP
             }
             
             return result;
-          }, [lines])}
+          }, [lines, visibleSections, settings])}
         </div>
       </div>
     </div>

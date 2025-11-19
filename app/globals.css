@@ -54,7 +54,7 @@
 
 @layer base {
   :root {
-    /* Notion/Nothing inspired color palette */
+    /* Notion/Nothing inspired color palette - Light Mode */
     --background: 0 0% 100%; /* Pure white */
     --foreground: 0 0% 0%; /* Pure black */
     --border: 0 0% 90%; /* Light grey */
@@ -70,6 +70,23 @@
     --accent-foreground: 0 0% 0%;
     --radius: 0.5rem;
   }
+
+  .dark {
+    /* Notion/Nothing inspired color palette - Dark Mode */
+    --background: 0 0% 8%; /* Very dark grey/black */
+    --foreground: 0 0% 98%; /* Almost white */
+    --border: 0 0% 20%; /* Dark grey */
+    --input: 0 0% 12%; /* Dark grey */
+    --ring: 0 0% 98%;
+    --primary: 0 0% 98%; /* Almost white */
+    --primary-foreground: 0 0% 8%; /* Very dark */
+    --secondary: 0 0% 12%; /* Dark grey */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%; /* Dark grey */
+    --muted-foreground: 0 0% 65%; /* Light grey */
+    --accent: 0 0% 12%; /* Dark grey */
+    --accent-foreground: 0 0% 98%;
+  }
 }
 
 @layer base {
@@ -79,19 +96,33 @@
   body {
     @apply text-foreground;
     /* Subtle grid pattern - Notion style */
-    background-color: #fafafa !important; /* Off-white background */
+    background-color: hsl(var(--background)) !important;
     background-image: 
       linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px) !important;
     background-size: 20px 20px !important;
     background-position: 0 0, 0 0 !important;
+    transition: background-color 0.2s ease;
+  }
+
+  .dark body {
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
   }
   
   html {
-    background-color: #fafafa !important;
+    background-color: hsl(var(--background)) !important;
     background-image: 
       linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px) !important;
     background-size: 20px 20px !important;
+    transition: background-color 0.2s ease;
+  }
+
+  .dark html {
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
   }
 }

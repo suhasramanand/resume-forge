@@ -5,12 +5,17 @@ import { useDropzone } from 'react-dropzone';
 import { FormattedLine } from '@/lib/resumeFormatter';
 import { ResumeEditor } from '@/components/ResumeEditor';
 import { Logo } from '@/components/Logo';
+import { Copy, RotateCcw, Files, X, Save, Check, Upload } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function Home() {
-  const [resume, setResume] = useState<{ lines: FormattedLine[] } | null>(null);
+  const [resume, setResume] = useState<{ lines: FormattedLine[]; name?: string; lastModified?: Date } | null>(null);
+  const [resumeName, setResumeName] = useState<string>('');
+  const [lastModified, setLastModified] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
   const [showShimmer, setShowShimmer] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Show shimmer after a delay (only for slower loads)
   useEffect(() => {
@@ -36,6 +41,10 @@ export default function Home() {
     setError(null);
     setShowShimmer(false);
 
+    // Extract filename without extension
+    const fileName = file.name;
+    const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -56,7 +65,14 @@ export default function Home() {
       if (!data.formatted || !data.formatted.lines) {
         throw new Error('Invalid response from server');
       }
-      setResume(data.formatted);
+      const resumeData = {
+        ...data.formatted,
+        name: fileNameWithoutExt || `Resume ${new Date().toLocaleDateString()}`,
+        lastModified: new Date(),
+      };
+      setResume(resumeData);
+      setResumeName(resumeData.name);
+      setLastModified(new Date());
     } catch (err: any) {
       // Log error in development only
       if (process.env.NODE_ENV === 'development') {
@@ -80,74 +96,208 @@ export default function Home() {
 
   const handleUpdate = (updatedLines: FormattedLine[]) => {
     if (resume) {
-      setResume({ lines: updatedLines });
+      setResume({ 
+        ...resume, 
+        lines: updatedLines,
+        lastModified: new Date(),
+      });
+      setLastModified(new Date());
     }
   };
+
+  const handleSave = useCallback(() => {
+    if (resume) {
+      const resumeData = {
+        ...resume,
+        name: resumeName || resume.name || `Resume ${new Date().toLocaleDateString()}`,
+        lastModified: new Date(),
+      };
+      setResume(resumeData);
+      setLastModified(new Date());
+      // Save to localStorage
+      try {
+        localStorage.setItem('resume-forge-last-resume', JSON.stringify({
+          lines: resumeData.lines,
+          name: resumeData.name,
+          lastModified: resumeData.lastModified?.toISOString(),
+        }));
+      } catch (err) {
+        console.error('Failed to save to localStorage:', err);
+      }
+    }
+  }, [resume, resumeName]);
+
+  const handleClear = () => {
+    if (confirm('Are you sure you want to clear the resume? This action cannot be undone.')) {
+      setResume(null);
+      setResumeName('');
+      setLastModified(null);
+      try {
+        localStorage.removeItem('resume-forge-last-resume');
+      } catch (err) {
+        console.error('Failed to clear localStorage:', err);
+      }
+    }
+  };
+
+  const handleDuplicate = () => {
+    if (resume) {
+      const duplicatedResume = {
+        ...resume,
+        name: `${resume.name || 'Resume'} (Copy)`,
+        lastModified: new Date(),
+      };
+      setResume(duplicatedResume);
+      setResumeName(duplicatedResume.name || '');
+      setLastModified(new Date());
+    }
+  };
+
+  const handleCopy = async () => {
+    if (resume) {
+      try {
+        const resumeText = resume.lines
+          .map(line => {
+            if (line.type === 'header') return line.content || '';
+            if (line.type === 'section') return `\n${line.content || ''}\n`;
+            if (line.type === 'bullet') return `• ${line.content || ''}`;
+            return line.content || '';
+          })
+          .join('\n');
+        await navigator.clipboard.writeText(resumeText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + S: Save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('resume-forge-last-resume');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.lines) {
+          setResume({
+            lines: parsed.lines,
+            name: parsed.name,
+            lastModified: parsed.lastModified ? new Date(parsed.lastModified) : new Date(),
+          });
+          setResumeName(parsed.name || '');
+          setLastModified(parsed.lastModified ? new Date(parsed.lastModified) : new Date());
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load from localStorage:', err);
+    }
+  }, []);
 
   const handleFinalize = () => {
     // This will be handled by the ResumeEditor component's handleFinalize
     // The onExport prop is optional and used for external triggers if needed
   };
 
+  const handleUploadNew = () => {
+    if (resume && !confirm('Upload a new resume? Your current changes will be lost.')) {
+      return;
+    }
+    setResume(null);
+    setResumeName('');
+    setLastModified(null);
+    setError(null);
+  };
+
   return (
     <div className="min-h-screen w-full">
-      <div className="px-6 sm:px-12 lg:px-16 pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8">
+      <div className={`px-6 sm:px-12 lg:px-16 pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 flex items-center justify-between ${resume ? 'pb-2' : ''}`}>
         <Logo />
+        <div className="flex items-center gap-3">
+          {resume && (
+            <button
+              onClick={handleUploadNew}
+              className="flex items-center gap-2 px-4 py-2 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg hover:bg-secondary hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              title="Upload new resume"
+              aria-label="Upload new resume"
+            >
+              <Upload size={18} className="text-foreground" />
+              <span className="text-sm font-medium text-foreground hidden sm:inline">Upload New</span>
+            </button>
+          )}
+          <ThemeToggle />
+        </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-16">
-        <div
-          {...getRootProps()}
-          className={`relative p-12 sm:p-16 border-2 border-dashed rounded-xl text-center bg-background cursor-pointer transition-all duration-200 ${
-            isDragActive 
-              ? 'border-foreground/60 bg-secondary/50 shadow-xl scale-[1.01] ring-2 ring-foreground/10' 
-              : 'border-border hover:border-foreground/40 hover:bg-secondary/30 hover:shadow-lg'
-          }`}
-        >
-          <input {...getInputProps()} aria-label="Upload resume file" />
-          <div className="flex flex-col items-center gap-5">
-            <div className={`relative w-20 h-20 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+      {!resume && (
+        <div className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-16">
+          <div
+            {...getRootProps()}
+            className={`relative p-12 sm:p-16 border-2 border-dashed rounded-xl text-center bg-background cursor-pointer transition-all duration-200 ${
               isDragActive 
-                ? 'bg-foreground/10 scale-110' 
-                : 'bg-muted group-hover:bg-foreground/5'
-            }`}>
-              <svg className={`w-10 h-10 text-foreground transition-transform duration-200 ${
-                isDragActive ? 'scale-110' : ''
-              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-              </svg>
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-                {isDragActive
-                  ? 'Drop your resume here'
-                  : 'Upload your resume'}
-              </h2>
-              <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto">
-                {isDragActive
-                  ? 'Release to upload and start editing'
-                  : 'Drag & drop a file here, or click to browse'}
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                <span className="text-xs font-medium text-muted-foreground bg-muted/80 px-3 py-1.5 rounded-full border border-border/50">
-                  PDF
-                </span>
-                <span className="text-xs font-medium text-muted-foreground bg-muted/80 px-3 py-1.5 rounded-full border border-border/50">
-                  DOCX
-                </span>
-                <span className="text-xs font-medium text-muted-foreground bg-muted/80 px-3 py-1.5 rounded-full border border-border/50">
-                  DOC
-                </span>
-                <span className="text-xs font-medium text-muted-foreground bg-muted/80 px-3 py-1.5 rounded-full border border-border/50">
-                  TXT
-                </span>
+                  ? 'border-foreground/60 bg-secondary/50 shadow-xl scale-[1.01] ring-2 ring-foreground/10' 
+                  : 'border-border hover:border-foreground/40 hover:bg-secondary/30 hover:shadow-lg'
+            }`}
+          >
+            <input {...getInputProps()} aria-label="Upload resume file" />
+            <div className="flex flex-col items-center gap-5">
+              <div className={`relative w-20 h-20 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+                isDragActive 
+                  ? 'bg-foreground/10 scale-110' 
+                  : 'bg-muted group-hover:bg-foreground/5'
+              }`}>
+                <svg className={`w-10 h-10 text-foreground transition-transform duration-200 ${
+                  isDragActive ? 'scale-110' : ''
+                }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                  {isDragActive
+                    ? 'Drop your resume here'
+                    : 'Upload your resume'}
+                </h2>
+                <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto">
+                  {isDragActive
+                      ? 'Release to upload and start editing'
+                    : 'Drag & drop a file here, or click to browse'}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                  <span className="text-xs font-medium text-muted-foreground bg-muted/80 px-3 py-1.5 rounded-full border border-border/50">
+                    PDF
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground bg-muted/80 px-3 py-1.5 rounded-full border border-border/50">
+                    DOCX
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground bg-muted/80 px-3 py-1.5 rounded-full border border-border/50">
+                    DOC
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground bg-muted/80 px-3 py-1.5 rounded-full border border-border/50">
+                    TXT
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {loading && (
+      {!resume && loading && (
         <div className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-16 mb-8">
           <div className="p-6 sm:p-8 bg-background border border-border rounded-xl text-foreground text-center shadow-sm">
             <div className="flex flex-col items-center gap-4">
@@ -187,14 +337,14 @@ export default function Home() {
         </div>
       )}
 
-      {error && (
+      {!resume && error && (
         <div className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-16 mb-8">
           <div className="p-6 sm:p-8 bg-red-50/80 border-2 border-red-200/80 rounded-xl text-center shadow-sm backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
                 <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                </svg>
+            </svg>
               </div>
               <div>
                 <h3 className="text-base font-semibold text-red-900 mb-1">Unable to process resume</h3>
@@ -207,7 +357,73 @@ export default function Home() {
       )}
 
       {resume && (
-        <ResumeEditor lines={resume.lines} onUpdate={handleUpdate} onExport={handleFinalize} />
+        <div className="w-full flex flex-col" style={{ height: 'calc(100vh - 5rem)' }}>
+          {/* Resume Header */}
+          <div className="w-full px-6 sm:px-12 lg:px-16 mb-4 sm:mb-6">
+            <div className="flex items-center justify-between gap-4 p-4 sm:p-5 bg-background/95 backdrop-blur-sm border border-border/80 rounded-xl shadow-sm">
+              <div className="flex-1 min-w-0">
+                <input
+                  type="text"
+                  value={resumeName}
+                  onChange={(e) => {
+                    setResumeName(e.target.value);
+                    setResume({ ...resume, name: e.target.value });
+                  }}
+                  onBlur={handleSave}
+                  placeholder="Resume Name"
+                  className="w-full text-base sm:text-lg font-semibold text-foreground bg-transparent border-none outline-none focus:ring-0 p-0 placeholder:text-muted-foreground/50"
+                />
+                {lastModified && (
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Last modified: {lastModified.toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <button
+                  onClick={handleCopy}
+                  className="p-2 sm:p-2.5 hover:bg-secondary rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
+                  title="Copy to clipboard"
+                  aria-label="Copy resume to clipboard"
+                >
+                  {copied ? (
+                    <Check size={18} className="text-green-600" />
+                  ) : (
+                    <Copy size={18} className="text-foreground" />
+                  )}
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="p-2 sm:p-2.5 hover:bg-secondary rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
+                  title="Save (Ctrl+S or Cmd+S)"
+                  aria-label="Save resume"
+                >
+                  <Save size={18} className="text-foreground" />
+                </button>
+                <button
+                  onClick={handleDuplicate}
+                  className="p-2 sm:p-2.5 hover:bg-secondary rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
+                  title="Duplicate resume"
+                  aria-label="Duplicate resume"
+                >
+                  <Files size={18} className="text-foreground" />
+                </button>
+                <div className="w-px h-6 bg-border/50 mx-0.5"></div>
+                <button
+                  onClick={handleClear}
+                  className="p-2 sm:p-2.5 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-200 active:scale-95"
+                  title="Clear resume"
+                  aria-label="Clear resume"
+                >
+                  <RotateCcw size={18} />
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="w-full flex-1 min-h-0">
+            <ResumeEditor lines={resume.lines} onUpdate={handleUpdate} onExport={handleFinalize} />
+          </div>
+        </div>
       )}
     </div>
   );

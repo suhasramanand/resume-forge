@@ -15,7 +15,9 @@ import {
 import { SortableLine } from './SortableLine';
 import { BlockRenderer } from './BlockRenderer';
 import { SortableSection } from './SortableSection';
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, Copy, Check } from 'lucide-react';
+import { getResumeAsText } from '@/lib/utils/resumeText';
+import { useState } from 'react';
 
 interface EditorContentProps {
   lines: FormattedLine[];
@@ -34,6 +36,7 @@ interface EditorContentProps {
   onLineDragEnd: (event: DragEndEvent) => void;
   onSectionDragEnd: (event: DragEndEvent) => void;
   onExport: () => void;
+  onCopy?: () => void;
   editorScrollRef?: React.RefObject<HTMLDivElement>;
   previewScrollRef?: React.RefObject<HTMLDivElement>;
 }
@@ -55,12 +58,26 @@ export function EditorContent({
   onLineDragEnd,
   onSectionDragEnd,
   onExport,
+  onCopy,
   editorScrollRef,
   previewScrollRef,
 }: EditorContentProps) {
   const internalScrollRef = useRef<HTMLDivElement>(null);
   const scrollRef = editorScrollRef || internalScrollRef;
   const isScrollingRef = useRef(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      const resumeText = getResumeAsText(lines);
+      await navigator.clipboard.writeText(resumeText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      if (onCopy) onCopy();
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   // Memoize ordered sections and filtered lines
   const orderedSections = useMemo(
@@ -114,6 +131,16 @@ export function EditorContent({
           <p className="text-xs text-muted-foreground mt-1.5">Click any field to edit • Drag to reorder</p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-background border border-border text-foreground rounded-lg text-sm font-medium hover:bg-secondary hover:shadow-md active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:ring-offset-2 shadow-sm"
+            onClick={handleCopy}
+            title="Copy to clipboard"
+            aria-label="Copy resume to clipboard"
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
+            <span className="sm:hidden">{copied ? '✓' : 'Copy'}</span>
+          </button>
           <button 
             className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm font-medium hover:bg-foreground/90 hover:shadow-md active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:ring-offset-2 shadow-sm"
             onClick={onExport}

@@ -193,7 +193,7 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
     });
     
     if (filteredSkills.length > 0) {
-      addLine('section', 'TECHNICAL SKILLS', { section: 'skills' });
+    addLine('section', 'TECHNICAL SKILLS', { section: 'skills' });
       const categorizedSkills = categorizeSkills(filteredSkills);
     
     // Reorganize into the requested format
@@ -259,7 +259,7 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
       categorizedSkills['Languages'].forEach(skill => {
         const category = categorizeSkill(skill);
         if (category) {
-          const lowerSkill = skill.toLowerCase();
+        const lowerSkill = skill.toLowerCase();
           if (!skillGroups[category].includes(skill)) {
             skillGroups[category].push(skill);
             categorizedSkillSet.add(lowerSkill);
@@ -301,7 +301,7 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
       categorizedSkills['Databases'].forEach(skill => {
         const category = categorizeSkill(skill);
         if (category) {
-          const lowerSkill = skill.toLowerCase();
+        const lowerSkill = skill.toLowerCase();
           if (!skillGroups[category].includes(skill)) {
             skillGroups[category].push(skill);
             categorizedSkillSet.add(lowerSkill);
@@ -311,9 +311,9 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
           const lowerSkill = skill.toLowerCase();
           if (!categorizedSkillSet.has(lowerSkill)) {
             if (lowerSkill.includes('sql') && !lowerSkill.includes('postgres') && !lowerSkill.includes('mysql')) {
-              skillGroups['Programming'].push(skill);
-            } else {
-              skillGroups['Data & Integration'].push(skill);
+            skillGroups['Programming'].push(skill);
+        } else {
+          skillGroups['Data & Integration'].push(skill);
             }
             categorizedSkillSet.add(lowerSkill);
           }
@@ -323,12 +323,12 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
     if (categorizedSkills['Frameworks']) {
       categorizedSkills['Frameworks'].forEach(skill => {
         const category = categorizeSkill(skill) || 'Frontend';
-        const lowerSkill = skill.toLowerCase();
+      const lowerSkill = skill.toLowerCase();
         if (!categorizedSkillSet.has(lowerSkill)) {
           skillGroups[category].push(skill);
           categorizedSkillSet.add(lowerSkill);
-        }
-      });
+      }
+    });
     }
     
     if (categorizedSkills['Other']) {
@@ -361,7 +361,7 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
             skillGroups['Frontend'].push(skill);
             categorizedSkillSet.add(lowerSkill);
           }
-        }
+          }
         // Cloud & DevOps
         else if (lowerSkill.includes('aws') || lowerSkill.includes('gcp') || lowerSkill.includes('azure') || lowerSkill.includes('docker') || lowerSkill.includes('kubernetes') || lowerSkill.includes('terraform') || lowerSkill.includes('ci/cd') || lowerSkill.includes('iam')) {
           if (!skillGroups['Cloud & DevOps'].includes(skill)) {
@@ -407,7 +407,7 @@ export function formatResume(parsed: ParsedResume): FormattedResume {
         }
       }
     });
-      addSeparator();
+    addSeparator();
     }
   }
 

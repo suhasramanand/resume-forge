@@ -38,6 +38,7 @@ export const SortableLine = React.memo(function SortableLine({
   isFirst,
   isLast,
   isSectionHeading = false,
+  hideActions = false,
 }: SortableLineProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const {
@@ -245,9 +246,10 @@ export const SortableLine = React.memo(function SortableLine({
               </span>
             )}
           </div>
+          {!hideActions && (
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
-              className="p-1.5 border border-border rounded-lg bg-background hover:bg-secondary hover:border-foreground/20 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
+                className="p-1.5 border border-border rounded-lg bg-background hover:bg-secondary hover:border-foreground/20 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-foreground/20 active:scale-95"
               onClick={onAddLine}
               title="Add below (or press Enter to add)"
               aria-label="Add line below"
@@ -255,7 +257,7 @@ export const SortableLine = React.memo(function SortableLine({
               <Plus size={14} />
             </button>
             <button
-              className="p-1.5 border border-border rounded-lg bg-background hover:bg-red-50 hover:border-red-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-200 active:scale-95"
+                className="p-1.5 border border-border rounded-lg bg-background hover:bg-red-50 hover:border-red-300 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-200 active:scale-95"
               onClick={onRemoveLine}
               title="Delete (or press Delete key)"
               aria-label="Delete line"
@@ -263,6 +265,7 @@ export const SortableLine = React.memo(function SortableLine({
               <Trash2 size={14} className="text-red-600" />
             </button>
           </div>
+          )}
         </div>
       )}
     </div>

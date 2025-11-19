@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FormattedLine } from '@/lib/resumeFormatter';
 import {
   DndContext,
@@ -40,6 +40,8 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
   const previewContentRef = useRef<HTMLDivElement>(null);
   const editorScrollRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(() => new Set());
+  const [settings, setSettings] = useState<any>(null);
   
   const {
     editingId,
@@ -72,6 +74,12 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    historyLength,
+    currentIndex,
   } = useResumeEditor(lines, onUpdate, previewContentRef);
 
   // Sensors should be created directly, not memoized (hooks must be called unconditionally)
@@ -111,6 +119,16 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
         e.preventDefault();
         setSidebarOpen(prev => !prev);
       }
+      // Ctrl/Cmd + Z: Undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo) undo();
+      }
+      // Ctrl/Cmd + Shift + Z: Redo
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        if (canRedo) redo();
+      }
       // Ctrl/Cmd + P: Export (but don't prevent default browser print)
       if ((e.ctrlKey || e.metaKey) && e.key === 'p' && !e.shiftKey) {
         // Let browser handle Ctrl+P for print, we'll use our export button
@@ -125,28 +143,37 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setSidebarOpen, showExportPreview, setShowExportPreview]);
+  }, [setSidebarOpen, showExportPreview, setShowExportPreview, canUndo, canRedo, undo, redo]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden relative p-3 sm:p-4 gap-3 sm:gap-4">
+    <div className="flex h-full w-full overflow-hidden relative p-3 sm:p-4 gap-3 sm:gap-4">
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         sections={sections}
         expandedSections={expandedSections}
         toggleSection={toggleSection}
+        lines={lines}
+        onLinesChange={onUpdate}
+        undoRedo={{
+          canUndo,
+          canRedo,
+          onUndo: undo,
+          onRedo: redo,
+          historyLength,
+          currentIndex,
+        }}
+        visibleSections={visibleSections}
+        onVisibleSectionsChange={setVisibleSections}
+        settings={settings}
+        onSettingsChange={(newSettings) => {
+          const updated = { ...settings, ...newSettings };
+          setSettings(updated);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('resume-forge-settings', JSON.stringify(updated));
+          }
+        }}
       />
-
-      {!sidebarOpen && (
-        <button 
-          className="fixed left-4 top-4 z-30 p-3 bg-background/95 backdrop-blur-sm border border-border/80 rounded-xl shadow-lg hover:bg-secondary hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:ring-offset-2"
-          onClick={() => setSidebarOpen(true)}
-          title="Open Sidebar (Ctrl+B or Cmd+B)"
-          aria-label="Open sidebar"
-        >
-          <Menu size={20} className="text-foreground" />
-        </button>
-      )}
 
       <EditorContent
         lines={lines}
@@ -178,7 +205,14 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
         <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 h-12 bg-foreground/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"></div>
       </div>
 
-      <PreviewPanel ref={previewContentRef} lines={lines} editorScrollRef={editorScrollRef} previewScrollRef={previewScrollRef} />
+      <PreviewPanel 
+        ref={previewContentRef} 
+        lines={lines} 
+        editorScrollRef={editorScrollRef} 
+        previewScrollRef={previewScrollRef}
+        visibleSections={visibleSections}
+        settings={settings}
+      />
 
       <SectionMenu
         sections={sectionMenuItems}
@@ -191,6 +225,8 @@ export function ResumeEditor({ lines, onUpdate, onExport }: ResumeEditorProps) {
         onClose={() => setShowExportPreview(false)}
         onExport={handleFinalize}
         lines={lines}
+        visibleSections={visibleSections}
+        settings={settings}
       />
     </div>
   );
